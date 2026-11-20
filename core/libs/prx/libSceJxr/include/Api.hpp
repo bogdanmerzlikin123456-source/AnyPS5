@@ -110,7 +110,9 @@ std::int64_t APS5_VABI PKCreateFactory_Release_nid_postfix(void** factory);
 std::int64_t APS5_VABI PKCreateFactory_nid_postfix(void** factory, std::uint32_t version);
 std::int64_t APS5_VABI PKFormatConverter_Convert_nid_postfix(void* converter, const void* rect, std::uint8_t* pixels, std::uint32_t stride);
 std::int64_t APS5_VABI PKFormatConverter_Copy_nid_postfix(JxrGuestFormatConverter* converter, const void* rectangle, std::uint8_t* buffer, std::uint32_t stride);
-int APS5_VABI PKFormatConverter_EnumConversions_nid_postfix();
+std::int64_t APS5_VABI PKFormatConverter_EnumConversions_nid_postfix(const JxrGuestGuid* sourceFormat,
+                                                                     std::uint32_t index,
+                                                                     const JxrGuestGuid** targetFormat);
 std::int64_t APS5_VABI PKFormatConverter_GetPixelFormat_nid_postfix(JxrGuestFormatConverter* converter, JxrGuestGuid* pixelFormat);
 std::int64_t APS5_VABI PKFormatConverter_GetResolution_nid_postfix(JxrGuestFormatConverter* converter, float* x, float* y);
 std::int64_t APS5_VABI PKFormatConverter_GetSize_nid_postfix(JxrGuestFormatConverter* converter, std::int32_t* width, std::int32_t* height);

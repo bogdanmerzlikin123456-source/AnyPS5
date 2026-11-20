@@ -286,6 +286,11 @@ int64_t JxrConvertNative_nid_no_patch(void* converter, const void* rectangle, ui
 }
 
 
+int64_t JxrEnumConversions_nid_no_patch(const void* sourceFormat, uint32_t index, const void** targetFormat) {
+    return PKFormatConverter_EnumConversions((const PKPixelFormatGUID*)sourceFormat, index,
+                                             (const PKPixelFormatGUID**)targetFormat);
+}
+
 int64_t JxrFormatConverterInitialize_nid_no_patch(void* converter, void* decoder, const void* sourceFormat,
                                                    const char* extension, const void* targetFormat,
                                                    int32_t* callbackId) {

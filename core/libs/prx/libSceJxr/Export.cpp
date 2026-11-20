@@ -45,6 +45,8 @@
 #include "prx/libc/include/General.hpp"
 
 extern "C" std::int64_t PKImageEncode_Transcode_impl_nid_no_patch(void* encoder, void* converter, void* rectangle);
+extern "C" std::int64_t JxrEnumConversions_nid_no_patch(const void* sourceFormat, std::uint32_t index,
+                                                        const void** targetFormat);
 
 namespace {
 constexpr std::int64_t WmpErrSuccess = 0;
@@ -98,6 +100,47 @@ TSlot Slot(TFunction* function) {
 std::int64_t AllocateZeroed(void** out, std::size_t size) {
     *out = calloc_nid_postfix(1, size);
     return *out ? WmpErrSuccess : WmpErrOutOfMemory;
+}
+
+constexpr const JxrGuestGuid* ConversionGuids[] = {
+    &JxrGuest_GUID_PKPixelFormatDontCare_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat8bppGray_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat16bppRGB555_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat16bppRGB565_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat24bppBGR_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat24bppRGB_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat32bppBGR_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat32bppBGRA_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat32bppPBGRA_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat32bppGrayFloat_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat32bppRGBA_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat32bppPRGBA_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat48bppRGBFixedPoint_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat16bppGrayFixedPoint_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat32bppRGB101010_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat48bppRGB_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat96bppRGBFixedPoint_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat96bppRGBFloat_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat128bppRGBAFloat_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat128bppRGBFloat_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat64bppRGBAFixedPoint_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat64bppRGBFixedPoint_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat128bppRGBAFixedPoint_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat128bppRGBFixedPoint_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat64bppRGBAHalf_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat64bppRGBHalf_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat48bppRGBHalf_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat32bppRGBE_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat16bppGrayHalf_nid_no_patch,
+    &JxrGuest_GUID_PKPixelFormat32bppGrayFixedPoint_nid_no_patch,
+};
+
+const JxrGuestGuid* GuestConversionGuid(const void* native) {
+    if (!native) return nullptr;
+    for (const auto* guid : ConversionGuids) {
+        if (std::memcmp(guid, native, sizeof(*guid)) == 0) return guid;
+    }
+    return nullptr;
 }
 
 std::int64_t APS5_VABI CreateStreamFromFilename_nid_no_patch(Jxr::Stream**, const char*, const char*) {
@@ -305,8 +348,18 @@ std::int64_t APS5_VABI PKFormatConverter_Copy_nid_postfix(JxrGuestFormatConverte
     return result;
 }
 
-int APS5_VABI PKFormatConverter_EnumConversions_nid_postfix() {
-    NotImplemented_nid_no_patch(__func__);
+std::int64_t APS5_VABI PKFormatConverter_EnumConversions_nid_postfix(const JxrGuestGuid* sourceFormat,
+                                                                    std::uint32_t index,
+                                                                    const JxrGuestGuid** targetFormat) {
+    if (!sourceFormat || !targetFormat) APS5_INVALID_ARG_EX;
+    JxrGuestGuid source{};
+    if (!GuestCopyIn_nid_no_patch(&source, sourceFormat, sizeof(source))) APS5_INVALID_ARG_EX;
+    const void* native = nullptr;
+    const auto result = JxrEnumConversions_nid_no_patch(&source, index, &native);
+    const auto* target = GuestConversionGuid(native);
+    if (!target) throw std::logic_error("PKFormatConverter_EnumConversions returned an unexported GUID");
+    if (!GuestCopyOut_nid_no_patch(targetFormat, &target, sizeof(target))) APS5_INVALID_ARG_EX;
+    return result;
 }
 
 std::int64_t APS5_VABI PKFormatConverter_GetPixelFormat_nid_postfix(JxrGuestFormatConverter* converter, JxrGuestGuid* pixelFormat) {

@@ -1,0 +1,5 @@
+# libSceJxr
+
+## add Functional
+
+- [PKFormatConverter_EnumConversions](../../../core/libs/prx/libSceJxr/Export.cpp) (libSceJxr) - not measured on a PS5: the prototype, the converted-target order and the error behaviour follow pinned jxrlib [JXRGluePFC.c](https://github.com/4creators/jxrlib/blob/f7521879862b9085318e814c6157490dd9dbbdb4/jxrgluelib/JXRGluePFC.c#L2083-L2283). The 64-bit `ERR` result is `WMP_errSuccess` (0) for the index-th table entry whose source GUID equals the caller's 16 bytes, and `WMP_errIndexNotFound` (-108) otherwise; both paths write a target pointer, `GUID_PKPixelFormatDontCare` on a miss. The written pointer is the module's exported GUID data symbol rather than jxrlib's copy, matching the console's data export, and callers must not free it. A null or unreadable source or output throws `std::invalid_argument` where jxrlib faults; a table result outside the exported GUIDs throws `std::logic_error`. Closes when: the console's function is disassembled or measured on a PS5

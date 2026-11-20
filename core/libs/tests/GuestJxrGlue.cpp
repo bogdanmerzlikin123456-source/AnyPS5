@@ -17,6 +17,8 @@
 
 extern "C" const void* GetPixelFormatFromHash(unsigned char hash);
 extern "C" std::size_t JxrTranscodeFixtureOverlapOffset();
+extern "C" long PKFormatConverter_EnumConversions(const void* sourceFormat, unsigned int index,
+                                                  const void** targetFormat);
 
 namespace {
 
@@ -411,6 +413,82 @@ void TestImageIids() {
     RequireThrows([] {
         const std::uint32_t* out = nullptr;
         GetImageDecodeIID_nid_postfix(nullptr, &out);
+    });
+}
+
+void TestEnumConversions() {
+    const JxrGuestGuid* target = nullptr;
+    const auto enumerate = [&target](const JxrGuestGuid& source, std::uint32_t index) {
+        target = reinterpret_cast<const JxrGuestGuid*>(std::uintptr_t{1});
+        return PKFormatConverter_EnumConversions_nid_postfix(&source, index, &target);
+    };
+
+    Require(enumerate(JxrGuest_GUID_PKPixelFormat24bppRGB_nid_no_patch, 0) == 0);
+    Require(target == &JxrGuest_GUID_PKPixelFormat24bppBGR_nid_no_patch);
+    Require(enumerate(JxrGuest_GUID_PKPixelFormat24bppRGB_nid_no_patch, 1) == 0);
+    Require(target == &JxrGuest_GUID_PKPixelFormat32bppBGR_nid_no_patch);
+    Require(enumerate(JxrGuest_GUID_PKPixelFormat24bppRGB_nid_no_patch, 2) == 0);
+    Require(target == &JxrGuest_GUID_PKPixelFormat8bppGray_nid_no_patch);
+    Require(enumerate(JxrGuest_GUID_PKPixelFormat24bppRGB_nid_no_patch, 3) == 0);
+    Require(target == &JxrGuest_GUID_PKPixelFormat16bppRGB555_nid_no_patch);
+    Require(enumerate(JxrGuest_GUID_PKPixelFormat24bppRGB_nid_no_patch, 4) == 0);
+    Require(target == &JxrGuest_GUID_PKPixelFormat16bppRGB565_nid_no_patch);
+    Require(enumerate(JxrGuest_GUID_PKPixelFormat24bppRGB_nid_no_patch, 5) == -108);
+    Require(target == &JxrGuest_GUID_PKPixelFormatDontCare_nid_no_patch);
+
+    Require(enumerate(JxrGuest_GUID_PKPixelFormat32bppBGR_nid_no_patch, 0) == 0);
+    Require(target == &JxrGuest_GUID_PKPixelFormat24bppRGB_nid_no_patch);
+    Require(enumerate(JxrGuest_GUID_PKPixelFormat32bppBGR_nid_no_patch, 1) == 0);
+    Require(target == &JxrGuest_GUID_PKPixelFormat24bppBGR_nid_no_patch);
+    Require(enumerate(JxrGuest_GUID_PKPixelFormat32bppBGR_nid_no_patch, 2) == -108);
+    Require(target == &JxrGuest_GUID_PKPixelFormatDontCare_nid_no_patch);
+
+    Require(enumerate(JxrGuest_GUID_PKPixelFormat8bppGray_nid_no_patch, 0) == 0);
+    Require(target == &JxrGuest_GUID_PKPixelFormat24bppRGB_nid_no_patch);
+    Require(enumerate(JxrGuest_GUID_PKPixelFormat8bppGray_nid_no_patch, 1) == 0);
+    Require(target == &JxrGuest_GUID_PKPixelFormat24bppBGR_nid_no_patch);
+
+    Require(enumerate(JxrGuest_GUID_PKPixelFormatBlackWhite_nid_no_patch, 0) == 0);
+    Require(target == &JxrGuest_GUID_PKPixelFormat8bppGray_nid_no_patch);
+    Require(enumerate(JxrGuest_GUID_PKPixelFormat16bppGray_nid_no_patch, 0) == 0);
+    Require(target == &JxrGuest_GUID_PKPixelFormat8bppGray_nid_no_patch);
+
+    Require(enumerate(JxrGuest_GUID_PKPixelFormat32bppCMYK_nid_no_patch, 0) == -108);
+    Require(target == &JxrGuest_GUID_PKPixelFormatDontCare_nid_no_patch);
+    Require(enumerate(JxrGuest_GUID_PKPixelFormatDontCare_nid_no_patch, 0) == -108);
+    Require(target == &JxrGuest_GUID_PKPixelFormatDontCare_nid_no_patch);
+    Require(enumerate(JxrGuest_GUID_PKPixelFormat24bppRGB_nid_no_patch, std::numeric_limits<std::uint32_t>::max()) == -108);
+    Require(target == &JxrGuest_GUID_PKPixelFormatDontCare_nid_no_patch);
+    Require(std::memcmp(target, &JxrGuest_GUID_PKPixelFormatDontCare_nid_no_patch, sizeof(JxrGuestGuid)) == 0);
+
+    const std::array<const JxrGuestGuid*, 8> sources{
+        &JxrGuest_GUID_PKPixelFormat24bppRGB_nid_no_patch,
+        &JxrGuest_GUID_PKPixelFormat32bppBGR_nid_no_patch,
+        &JxrGuest_GUID_PKPixelFormat8bppGray_nid_no_patch,
+        &JxrGuest_GUID_PKPixelFormatBlackWhite_nid_no_patch,
+        &JxrGuest_GUID_PKPixelFormat16bppGray_nid_no_patch,
+        &JxrGuest_GUID_PKPixelFormat64bppRGBA_nid_no_patch,
+        &JxrGuest_GUID_PKPixelFormat32bppRGBA_nid_no_patch,
+        &JxrGuest_GUID_PKPixelFormat128bppRGBAFloat_nid_no_patch,
+    };
+    for (const auto* source : sources) {
+        for (std::uint32_t index = 0; index < 8; ++index) {
+            const void* expectedTarget = nullptr;
+            const auto expected = PKFormatConverter_EnumConversions(source, index, &expectedTarget);
+            const auto actual = enumerate(*source, index);
+            Require(actual == expected);
+            Require(target != nullptr);
+            Require(std::memcmp(target, expectedTarget, sizeof(JxrGuestGuid)) == 0);
+            if (actual < 0) Require(target == &JxrGuest_GUID_PKPixelFormatDontCare_nid_no_patch);
+        }
+    }
+
+    RequireThrows([] {
+        const JxrGuestGuid* output = nullptr;
+        PKFormatConverter_EnumConversions_nid_postfix(nullptr, 0, &output);
+    });
+    RequireThrows([] {
+        PKFormatConverter_EnumConversions_nid_postfix(&JxrGuest_GUID_PKPixelFormat24bppRGB_nid_no_patch, 0, nullptr);
     });
 }
 
@@ -836,6 +914,7 @@ int main() {
     InitializeHeap();
     TestPixelFormatHash();
     TestImageIids();
+    TestEnumConversions();
     TestAlignedAllocation();
     TestInitializeConvert();
     TestFormatConverterInitialize();
